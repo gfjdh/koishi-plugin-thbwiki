@@ -20,8 +20,8 @@ export interface SpellCard {
   id: string;
   owner: string;
   name: string;
+  difficulty: string;
   game: string;
-  description: string;
 }
 
 export interface Music {

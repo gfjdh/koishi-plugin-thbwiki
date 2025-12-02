@@ -1,9 +1,15 @@
-import { Context } from 'koishi'
+import { Context, Logger } from 'koishi'
 import { getAliasesByKeyword } from './database'
 import { games } from './games'
 import { characters } from './characters'
 import { spellcards } from './spellcards'
 import { music } from './music'
+
+function escapeRegExp(string: string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // 转义正则表达式中的特殊字符
+}
+
+const logger = new Logger('thbwiki');
 
 export const allData = {
   game: games,
@@ -13,41 +19,43 @@ export const allData = {
 }
 
 export async function search(ctx: Context, keyword: string) {
-  const results: { type: string, item: any, match: string }[] = []
-  const regex = new RegExp(keyword, 'i')
+  logger.info(`Searching for keyword: ${keyword}`);
+  const keywords = keyword.trim().split(' ');
+  const results: { type: string, item: any, match: string }[] = [];
+  const regexes = keywords.map(keyword => new RegExp(escapeRegExp(keyword), 'i'));
 
   for (const game of games) {
-    if (regex.test(game.name) || regex.test(game.id)) {
-      results.push({ type: 'game', item: game, match: game.name })
+    if (regexes.every(regex => regex.test(game.name) || regex.test(game.id))) {
+      results.push({ type: 'game', item: game, match: game.name });
     }
   }
   for (const char of characters) {
-    if (regex.test(char.name) || regex.test(char.id) || char.alias.some(a => regex.test(a))) {
-      results.push({ type: 'character', item: char, match: char.name })
+    if (regexes.every(regex => regex.test(char.name) || regex.test(char.id) || char.alias.some(a => regex.test(a)))) {
+      results.push({ type: 'character', item: char, match: char.name });
     }
   }
   for (const card of spellcards) {
-    if (regex.test(card.name) || regex.test(card.id)) {
-      results.push({ type: 'spellcard', item: card, match: card.name })
+    if (regexes.every(regex => regex.test(card.name) || regex.test(card.id) || regex.test(card.owner) || regex.test(card.game))) {
+      results.push({ type: 'spellcard', item: card, match: card.name });
     }
   }
   for (const m of music) {
-    if (regex.test(m.name) || regex.test(m.id)) {
-      results.push({ type: 'music', item: m, match: m.name })
+    if (regexes.every(regex => regex.test(m.name) || regex.test(m.id))) {
+      results.push({ type: 'music', item: m, match: m.name });
     }
   }
 
-  const aliases = await getAliasesByKeyword(ctx, keyword)
+  const aliases = await getAliasesByKeyword(ctx, keywords.join(' '));
   for (const alias of aliases) {
-    const list = allData[alias.targetType]
-    const item = list.find(i => i.id === alias.targetId)
+    const list = allData[alias.targetType];
+    const item = list.find(i => i.id === alias.targetId);
     if (item) {
       if (!results.find(r => r.item.id === item.id && r.type === alias.targetType)) {
-         results.push({ type: alias.targetType, item: item, match: `${alias.alias} -> ${item.name || item.name}` })
+        results.push({ type: alias.targetType, item: item, match: `${alias.alias} -> ${item.name || item.name}` });
       }
     }
   }
-  return results
+  return results;
 }
 
 export function renderGame(game: any) {
@@ -55,11 +63,11 @@ export function renderGame(game: any) {
 }
 
 export function renderCharacter(char: any) {
-  return `角色：${char.name}\nID: ${char.id}\n别名：${char.alias.join(', ')}\n\n可以使用 角色简介、角色生活、角色能力、角色外貌、角色人际 查看详细信息。\n例如：“角色简介 ${char.name}”`
+  return `角色：${char.name}\nID: ${char.id}\n别名：${char.alias.join(', ')}\n\n可以使用 角色简介、角色生活、角色能力、角色外貌、角色人际、符卡列表 查看详细信息。\n例如：“角色简介 ${char.name}”`
 }
 
 export function renderSpellCard(card: any) {
-  return `符卡：${card.name}\nID: ${card.id}\n使用者：${card.owner}\n出处：${card.game}\n描述：${card.description}`
+  return `符卡：${card.name}\n原名: ${card.id}\n使用者：${card.owner}\n难度：${card.difficulty}\n出处：${card.game}`
 }
 
 export function renderMusic(m: any) {

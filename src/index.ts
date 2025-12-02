@@ -1,4 +1,4 @@
-import { Context, Schema } from 'koishi'
+import { Context, Logger, Schema } from 'koishi'
 import { extendDatabase, getAliasByTargetAndName, createAlias, getAliasByName, removeAliasByName } from './database'
 import { search, renderItem, renderGame, renderCharacter, renderSpellCard, renderMusic, allData } from './utils'
 
@@ -6,61 +6,61 @@ export const name = 'thbwiki'
 export const inject = ['database']
 export interface Config {}
 export const Config: Schema<Config> = Schema.object({})
-
+const logger = new Logger('thbwiki');
 export * from './database'
 
 export function apply(ctx: Context) {
   extendDatabase(ctx)
 
-  const thIntro = (_: any, keyword: string) => handleCharDetail(keyword, 'introduction', '简介')
-  const thLife = (_: any, keyword: string) => handleCharDetail(keyword, 'lifestyle', '生活状况')
-  const thAbility = (_: any, keyword: string) => handleCharDetail(keyword, 'abilities', '能力')
-  const thAppear = (_: any, keyword: string) => handleCharDetail(keyword, 'appearance', '外貌')
-  const thRel = (_: any, keyword: string) => handleCharDetail(keyword, 'relationships', '人际关系')
+  const thIntro = (keyword: string) => handleCharDetail(keyword, 'introduction', '简介')
+  const thLife = (keyword: string) => handleCharDetail(keyword, 'lifestyle', '生活状况')
+  const thAbility = (keyword: string) => handleCharDetail(keyword, 'abilities', '能力')
+  const thAppear = (keyword: string) => handleCharDetail(keyword, 'appearance', '外貌')
+  const thRel = (keyword: string) => handleCharDetail(keyword, 'relationships', '人际关系')
 
-  ctx.command('thbwiki/th-search <keyword:string>', '搜索东方Project相关信息')
+  ctx.command('thbwiki/th-search [...args]', '搜索东方Project相关信息')
     .alias('thb').alias('东方百科')
-    .action(thSearch)
+    .action((...args) => thSearch(args.join(' ')))
 
-  ctx.command('thbwiki/th-game <keyword:string>', '搜索游戏')
+  ctx.command('thbwiki/th-game [...args]', '搜索游戏')
     .alias('东方官作')
-    .action(thGame)
+    .action(({ session }, ...args) => thGame(args.join(' ')))
 
-  ctx.command('thbwiki/th-char <keyword:string>', '搜索角色基本信息')
+  ctx.command('thbwiki/th-char [...args]', '搜索角色基本信息')
     .alias('东方角色')
-    .action(thChar)
-
-  ctx.command('thbwiki/th-intro <keyword:string>', '查看角色简介')
+    .action(({ session }, ...args) => thChar(args.join(' ')))
+  ctx.command('thbwiki/th-intro [...args]', '查看角色简介')
     .alias('角色简介')
-    .action(thIntro)
+    .action(({ session }, ...args) => thIntro(args.join(' ')))
 
-  ctx.command('thbwiki/th-life <keyword:string>', '查看角色生活状况')
+  ctx.command('thbwiki/th-life [...args]', '查看角色生活状况')
     .alias('角色生活')
-    .action(thLife)
-
-  ctx.command('thbwiki/th-ability <keyword:string>', '查看角色能力')
+    .action(({ session }, ...args) => thLife(args.join(' ')))
+  ctx.command('thbwiki/th-ability [...args]', '查看角色能力')
     .alias('角色能力')
-    .action(thAbility)
+    .action(({ session }, ...args) => thAbility(args.join(' ')))
 
-  ctx.command('thbwiki/th-appear <keyword:string>', '查看角色外貌')
+  ctx.command('thbwiki/th-appear [...args]', '查看角色外貌')
     .alias('角色外貌')
-    .action(thAppear)
-
-  ctx.command('thbwiki/th-rel <keyword:string>', '查看角色人际关系')
+    .action(({ session }, ...args) => thAppear(args.join(' ')))
+  ctx.command('thbwiki/th-rel [...args]', '查看角色人际关系')
     .alias('角色人际')
-    .action(thRel)
+    .action(({ session }, ...args) => thRel(args.join(' ')))
 
-  ctx.command('thbwiki/th-spell <keyword:string>', '搜索符卡')
-    .alias('符卡信息')
-    .action(thSpell)
+  ctx.command('thbwiki/th-char-spell [...args]', '查看角色或作品符卡列表')
+    .alias('符卡列表')
+    .action(({ session }, ...args) => handleSpellCardsList(args.join(' ')))
 
-  ctx.command('thbwiki/th-music <keyword:string>', '搜索音乐')
+  ctx.command('thbwiki/th-spell [...args]', '搜索符卡')
+    .alias('符卡')
+    .action(({ session }, ...args) => thSpell(args.join(' ')))
+
+  ctx.command('thbwiki/th-music [...args]', '搜索音乐')
     .alias('东方音乐')
-    .action(thMusic)
-
+    .action(({ session }, ...args) => thMusic(args.join(' ')))
   ctx.command('thbwiki/th-rand <type:string>', '随机获取信息')
     .alias('随机thb')
-    .action(thRand)
+    .action(({ session }, ...args) => thRand(args.join(' ')))
 
   ctx.command('thbwiki/th-alias-add <target:string> <alias:string>', '添加别名')
     .alias('添加thb别名')
@@ -70,62 +70,64 @@ export function apply(ctx: Context) {
     .alias('删除thb别名')
     .action(thAliasRemove)
 
-  async function thSearch(_: any, keyword: string) {
+  async function thSearch(keyword: string) {
     if (!keyword) return '请输入搜索关键词'
     const results = await search(ctx, keyword)
     if (results.length === 0) return '未找到相关信息'
-    if (results.length === 1) {
-      return renderItem(results[0].type, results[0].item)
-    }
-    return '找到多个结果：\n' + results.map(r => `[${r.type}] ${r.match}`).join('\n')
+    const firstResult = results[0]
+    const moreResults = results.length > 1 ? '\n\n还有更多结果，请尝试更具体的关键词。' : ''
+    return renderItem(firstResult.type, firstResult.item) + moreResults
   }
 
-  async function thGame(_: any, keyword: string) {
+  async function thGame(keyword: string) {
     if (!keyword) return '请输入游戏名称'
     const results = (await search(ctx, keyword)).filter(r => r.type === 'game')
     if (results.length === 0) return '未找到游戏'
-    if (results.length === 1) return renderGame(results[0].item)
-    return '找到多个游戏：\n' + results.map(r => r.match).join('\n')
+    const firstResult = results[0]
+    const moreResults = results.length > 1 ? '\n\n还有更多结果，请尝试更具体的关键词。' : ''
+    return renderGame(firstResult.item) + moreResults
   }
 
-  async function thChar(_: any, keyword: string) {
+  async function thChar(keyword: string) {
     if (!keyword) return '请输入角色名称'
     const results = (await search(ctx, keyword)).filter(r => r.type === 'character')
     if (results.length === 0) return '未找到角色'
-    if (results.length === 1) return renderCharacter(results[0].item)
-    return '找到多个角色：\n' + results.map(r => r.match).join('\n')
+    const firstResult = results[0]
+    const moreResults = results.length > 1 ? '\n\n还有更多结果，请尝试更具体的关键词。' : ''
+    return renderCharacter(firstResult.item) + moreResults
   }
 
   async function handleCharDetail(keyword: string, field: string, label: string) {
     if (!keyword) return '请输入角色名称'
     const results = (await search(ctx, keyword)).filter(r => r.type === 'character')
     if (results.length === 0) return '未找到角色'
-    if (results.length === 1) {
-        const char = results[0].item
-        return `${char.name} - ${label}：\n${char[field]}`
-    }
-    return '找到多个角色：\n' + results.map(r => r.match).join('\n')
+    const firstResult = results[0]
+    const moreResults = results.length > 1 ? '\n\n还有更多结果，请尝试更具体的关键词。' : ''
+    const char = firstResult.item
+    return `${char.name} - ${label}：\n${char[field]}` + moreResults
   }
 
-  async function thSpell(_: any, keyword: string) {
+  async function thSpell(keyword: string) {
     if (!keyword) return '请输入符卡名称'
     const results = (await search(ctx, keyword)).filter(r => r.type === 'spellcard')
     if (results.length === 0) return '未找到符卡'
-    if (results.length === 1) return renderSpellCard(results[0].item)
-    return '找到多个符卡：\n' + results.map(r => r.match).join('\n')
+    const firstResult = results[0]
+    const moreResults = results.length > 1 ? '\n\n还有更多结果，请尝试更具体的关键词。' : ''
+    return renderSpellCard(firstResult.item) + moreResults
   }
 
-  async function thMusic(_: any, keyword: string) {
+  async function thMusic(keyword: string) {
     if (!keyword) return '请输入音乐名称'
     const results = (await search(ctx, keyword)).filter(r => r.type === 'music')
     if (results.length === 0) return '未找到音乐'
-    if (results.length === 1) return renderMusic(results[0].item)
-    return '找到多个音乐：\n' + results.map(r => r.match).join('\n')
+    const firstResult = results[0]
+    const moreResults = results.length > 1 ? '\n\n还有更多结果，请尝试更具体的关键词。' : ''
+    return renderMusic(firstResult.item) + moreResults
   }
 
-  async function thRand(_: any, type: string) {
+  async function thRand(type: string) {
     if (!type || !['game', 'character', 'spellcard', 'music'].includes(type)) {
-      return '请输入类型：game, character, spellcard, music'
+      type = 'spellcard'
     }
     const list = allData[type]
     const item = list[Math.floor(Math.random() * list.length)]
@@ -155,5 +157,12 @@ export function apply(ctx: Context) {
 
     await removeAliasByName(ctx, alias)
     return '别名已删除'
+  }
+
+  async function handleSpellCardsList(keyword: string) {
+    if (!keyword) return '请输入角色或作品名称'
+    const results = (await search(ctx, keyword)).filter(r => r.type === 'spellcard');
+    if (results.length === 0) return '未找到角色或作品'
+    return `${keyword} 的符卡：\n` + results.map(card => `原名：${card.item.id}\n译名：${card.item.name}\n难度：${card.item.difficulty}\n出处：${card.item.game}`).join('\n\n');
   }
 }
