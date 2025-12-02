@@ -40,7 +40,7 @@ export async function search(ctx: Context, keyword: string) {
     }
   }
   for (const m of music) {
-    if (regexes.every(regex => regex.test(m.name) || regex.test(m.id))) {
+    if (regexes.every(regex => regex.test(m.name) || regex.test(m.id) || regex.test(m.game) || regex.test(m.description))) {
       results.push({ type: 'music', item: m, match: m.name });
     }
   }

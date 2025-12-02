@@ -1,6 +1,7 @@
 import { Context, Logger, Schema } from 'koishi'
 import { extendDatabase, getAliasByTargetAndName, createAlias, getAliasByName, removeAliasByName } from './database'
 import { search, renderItem, renderGame, renderCharacter, renderSpellCard, renderMusic, allData } from './utils'
+import { randomInt } from 'crypto'
 
 export const name = 'thbwiki'
 export const inject = ['database']
@@ -18,9 +19,9 @@ export function apply(ctx: Context) {
   const thAppear = (keyword: string) => handleCharDetail(keyword, 'appearance', '外貌')
   const thRel = (keyword: string) => handleCharDetail(keyword, 'relationships', '人际关系')
 
-  ctx.command('thbwiki/th-search [...args]', '搜索东方Project相关信息')
+  ctx.command('thbwiki/th-search [...args]', '搜索东方Project相关信息，支持多关键词')
     .alias('thb').alias('东方百科')
-    .action((...args) => thSearch(args.join(' ')))
+    .action(({ session }, ...args) => thSearch(args.join(' ')))
 
   ctx.command('thbwiki/th-game [...args]', '搜索游戏')
     .alias('东方官作')
@@ -58,11 +59,16 @@ export function apply(ctx: Context) {
   ctx.command('thbwiki/th-music [...args]', '搜索音乐')
     .alias('东方音乐')
     .action(({ session }, ...args) => thMusic(args.join(' ')))
+
+  ctx.command('thbwiki/th-musicList [...args]', '查看角色或作品音乐列表')
+    .alias('音乐列表')
+    .action(async ({ session }, ...args) => thMusicList(args.join(' ')))
+
   ctx.command('thbwiki/th-rand <type:string>', '随机获取信息')
     .alias('随机thb')
     .action(({ session }, ...args) => thRand(args.join(' ')))
 
-  ctx.command('thbwiki/th-alias-add <target:string> <alias:string>', '添加别名')
+  ctx.command('thbwiki/th-alias-add <target:string> <alias:string>', '为角色添加别名')
     .alias('添加thb别名')
     .action(thAliasAdd)
 
@@ -125,9 +131,16 @@ export function apply(ctx: Context) {
     return renderMusic(firstResult.item) + moreResults
   }
 
+  async function thMusicList(keyword: string) {
+    if (!keyword) return '请输入角色或作品名称'
+    const results = (await search(ctx, keyword)).filter(r => r.type === 'music');
+    if (results.length === 0) return '未找到角色或作品'
+    return `${keyword} 的音乐：\n` + results.map(m => `原名：${m.item.id}\n译名：${m.item.name}\n出处：${m.item.game}\n描述：${m.item.description}`).join('\n\n');
+  }
+
   async function thRand(type: string) {
     if (!type || !['game', 'character', 'spellcard', 'music'].includes(type)) {
-      type = 'spellcard'
+      type = ['spellcard', 'music'][randomInt(1, 2)]
     }
     const list = allData[type]
     const item = list[Math.floor(Math.random() * list.length)]
@@ -135,10 +148,10 @@ export function apply(ctx: Context) {
   }
 
   async function thAliasAdd(_: any, target: string, alias: string) {
-    if (!target || !alias) return '请输入目标名称和别名'
-    const results = await search(ctx, target)
-    if (results.length === 0) return '未找到目标'
-    if (results.length > 1) return '找到多个目标，请使用更精确的名称'
+    if (!target || !alias) return '请输入角色名称和别名'
+    const results = (await search(ctx, target)).filter(r => r.type === 'character')
+    if (results.length === 0) return '未找到角色'
+    if (results.length > 1) return '找到多个角色，请使用更精确的名称'
 
     const item = results[0].item
     const type = results[0].type
@@ -147,7 +160,7 @@ export function apply(ctx: Context) {
     if (existing.length > 0) return '别名已存在'
 
     await createAlias(ctx, item.id, type, alias)
-    return `已为 ${item.name || item.name} 添加别名 ${alias}`
+    return `已为 ${item.name} 添加别名 ${alias}`
   }
 
   async function thAliasRemove(_: any, alias: string) {
