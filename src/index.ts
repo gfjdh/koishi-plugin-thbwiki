@@ -7,7 +7,10 @@ export const name = 'thbwiki'
 export const inject = ['database']
 export interface Config {}
 export const Config: Schema<Config> = Schema.object({})
+
 const logger = new Logger('thbwiki');
+const wikiURL = '\n\n内容来源：https://thbwiki.cc/';
+
 export * from './database'
 
 export function apply(ctx: Context) {
@@ -82,7 +85,7 @@ export function apply(ctx: Context) {
     if (results.length === 0) return '未找到相关信息'
     const firstResult = results[0]
     const moreResults = results.length > 1 ? '\n\n还有更多结果，请尝试更具体的关键词。' : ''
-    return renderItem(firstResult.type, firstResult.item) + moreResults
+    return renderItem(firstResult.type, firstResult.item) + moreResults + wikiURL
   }
 
   async function thGame(keyword: string) {
@@ -91,7 +94,7 @@ export function apply(ctx: Context) {
     if (results.length === 0) return '未找到游戏'
     const firstResult = results[0]
     const moreResults = results.length > 1 ? '\n\n还有更多结果，请尝试更具体的关键词。' : ''
-    return renderGame(firstResult.item) + moreResults
+    return renderGame(firstResult.item) + moreResults + wikiURL
   }
 
   async function thChar(keyword: string) {
@@ -100,7 +103,7 @@ export function apply(ctx: Context) {
     if (results.length === 0) return '未找到角色'
     const firstResult = results[0]
     const moreResults = results.length > 1 ? '\n\n还有更多结果，请尝试更具体的关键词。' : ''
-    return renderCharacter(firstResult.item) + moreResults
+    return renderCharacter(firstResult.item) + moreResults + wikiURL
   }
 
   async function handleCharDetail(keyword: string, field: string, label: string) {
@@ -110,7 +113,7 @@ export function apply(ctx: Context) {
     const firstResult = results[0]
     const moreResults = results.length > 1 ? '\n\n还有更多结果，请尝试更具体的关键词。' : ''
     const char = firstResult.item
-    return `${char.name} - ${label}：\n${char[field]}` + moreResults
+    return `${char.name} - ${label}：\n${char[field]}` + moreResults + wikiURL
   }
 
   async function thSpell(keyword: string) {
@@ -119,7 +122,7 @@ export function apply(ctx: Context) {
     if (results.length === 0) return '未找到符卡'
     const firstResult = results[0]
     const moreResults = results.length > 1 ? '\n\n还有更多结果，请尝试更具体的关键词。' : ''
-    return renderSpellCard(firstResult.item) + moreResults
+    return renderSpellCard(firstResult.item) + moreResults + wikiURL
   }
 
   async function thMusic(keyword: string) {
@@ -128,14 +131,14 @@ export function apply(ctx: Context) {
     if (results.length === 0) return '未找到音乐'
     const firstResult = results[0]
     const moreResults = results.length > 1 ? '\n\n还有更多结果，请尝试更具体的关键词。' : ''
-    return renderMusic(firstResult.item) + moreResults
+    return renderMusic(firstResult.item) + moreResults + wikiURL
   }
 
   async function thMusicList(keyword: string) {
     if (!keyword) return '请输入角色或作品名称'
     const results = (await search(ctx, keyword)).filter(r => r.type === 'music');
     if (results.length === 0) return '未找到角色或作品'
-    return `${keyword} 的音乐：\n` + results.map(m => `原名：${m.item.id}\n译名：${m.item.name}\n出处：${m.item.game}\n描述：${m.item.description}`).join('\n\n');
+    return `${keyword} 的音乐：\n` + results.map(m => `原名：${m.item.id}\n译名：${m.item.name}\n出处：${m.item.game}\n描述：${m.item.description}`).join('\n\n') + wikiURL;
   }
 
   async function thRand(type: string) {
@@ -144,7 +147,7 @@ export function apply(ctx: Context) {
     }
     const list = allData[type]
     const item = list[Math.floor(Math.random() * list.length)]
-    return renderItem(type, item)
+    return renderItem(type, item) + wikiURL
   }
 
   async function thAliasAdd(_: any, target: string, alias: string) {
@@ -176,6 +179,6 @@ export function apply(ctx: Context) {
     if (!keyword) return '请输入角色或作品名称'
     const results = (await search(ctx, keyword)).filter(r => r.type === 'spellcard');
     if (results.length === 0) return '未找到角色或作品'
-    return `${keyword} 的符卡：\n` + results.map(card => `原名：${card.item.id}\n译名：${card.item.name}\n难度：${card.item.difficulty}\n出处：${card.item.game}`).join('\n\n');
+    return `${keyword} 的符卡：\n` + results.map(card => `原名：${card.item.id}\n译名：${card.item.name}\n难度：${card.item.difficulty}\n出处：${card.item.game}`).join('\n\n') + wikiURL;
   }
 }
