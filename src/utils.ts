@@ -63,7 +63,7 @@ export function renderGame(game: any) {
 }
 
 export function renderCharacter(char: any) {
-  return `角色：${char.name}\nID: ${char.id}\n别名：${char.alias.join(', ')}\n\n可以使用 角色简介、角色生活、角色能力、角色外貌、角色人际、符卡列表 查看详细信息。\n例如：“角色简介 ${char.name}”`
+  return `角色：${char.name}\n原名: ${char.id}\n别名：${char.alias.join(', ')}\n\n可以使用 角色简介、角色生活、角色能力、角色外貌、角色人际、符卡列表 查看详细信息。\n例如：“角色简介 ${char.name}”`
 }
 
 export function renderSpellCard(card: any) {
@@ -71,7 +71,7 @@ export function renderSpellCard(card: any) {
 }
 
 export function renderMusic(m: any) {
-  return `音乐：${m.name}\nID: ${m.id}\n出处：${m.game}\n描述：${m.description}`
+  return `音乐：${m.name}\n原名: ${m.id}\n出处：${m.game}\n描述：${m.description}`
 }
 
 export function renderItem(type: string, item: any) {
