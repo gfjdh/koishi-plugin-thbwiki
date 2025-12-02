@@ -143,7 +143,7 @@ export function apply(ctx: Context) {
 
   async function thRand(type: string) {
     if (!type || !['game', 'character', 'spellcard', 'music'].includes(type)) {
-      type = ['spellcard', 'music'][randomInt(1, 2)]
+      type = ['game', 'character', 'spellcard', 'music'][randomInt(1, 4)]
     }
     const list = allData[type]
     const item = list[Math.floor(Math.random() * list.length)]

@@ -55,6 +55,15 @@ export async function search(ctx: Context, keyword: string) {
       }
     }
   }
+
+  if (results.length === 0) {
+    for (const char of characters) {
+      if (regexes.every(regex => regex.test(char.introduction) || regex.test(char.abilities) || regex.test(char.relationships)|| regex.test(char.appearance)|| regex.test(char.lifestyle))) {
+        results.push({ type: 'character', item: char, match: char.name });
+    }
+  }
+  }
+
   return results;
 }
 
