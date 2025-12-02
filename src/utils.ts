@@ -47,7 +47,6 @@ export async function search(ctx: Context, keyword: string) {
       }
     }
   }
-
   return results
 }
 
@@ -56,7 +55,7 @@ export function renderGame(game: any) {
 }
 
 export function renderCharacter(char: any) {
-  return `角色：${char.name}\nID: ${char.id}\n别名：${char.alias.join(', ')}\n\n可以使用 角色简介、角色生活、角色能力、角色外貌、角色人际 查看详细信息。`
+  return `角色：${char.name}\nID: ${char.id}\n别名：${char.alias.join(', ')}\n\n可以使用 角色简介、角色生活、角色能力、角色外貌、角色人际 查看详细信息。\n例如：“角色简介 ${char.name}”`
 }
 
 export function renderSpellCard(card: any) {
