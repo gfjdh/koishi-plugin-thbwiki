@@ -34,16 +34,6 @@ export async function search(ctx: Context, keyword: string) {
       results.push({ type: 'character', item: char, match: char.name });
     }
   }
-  for (const card of spellcards) {
-    if (regexes.every(regex => regex.test(card.name) || regex.test(card.id) || regex.test(card.owner) || regex.test(card.game))) {
-      results.push({ type: 'spellcard', item: card, match: card.name });
-    }
-  }
-  for (const m of music) {
-    if (regexes.every(regex => regex.test(m.name) || regex.test(m.id) || regex.test(m.game) || regex.test(m.description))) {
-      results.push({ type: 'music', item: m, match: m.name });
-    }
-  }
 
   const aliases = await getAliasesByKeyword(ctx, keywords.join(' '));
   for (const alias of aliases) {
@@ -53,6 +43,17 @@ export async function search(ctx: Context, keyword: string) {
       if (!results.find(r => r.item.id === item.id && r.type === alias.targetType)) {
         results.push({ type: alias.targetType, item: item, match: `${alias.alias} -> ${item.name || item.name}` });
       }
+    }
+  }
+  
+  for (const card of spellcards) {
+    if (regexes.every(regex => regex.test(card.name) || regex.test(card.id) || regex.test(card.owner) || regex.test(card.game))) {
+      results.push({ type: 'spellcard', item: card, match: card.name });
+    }
+  }
+  for (const m of music) {
+    if (regexes.every(regex => regex.test(m.name) || regex.test(m.id) || regex.test(m.game) || regex.test(m.description))) {
+      results.push({ type: 'music', item: m, match: m.name });
     }
   }
 
